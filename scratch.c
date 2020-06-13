@@ -25,7 +25,7 @@
 
 
 
-#define NES_MIRRORING 1
+
 
 
 ///// METASPRITES
@@ -67,7 +67,7 @@ const unsigned char wall[]={
 
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] = { 
-  0x0F,			// screen color
+  0x0D,			// screen color
 
   0x01,0x30,0x27,0x00,	// background palette 0
   0x1C,0x20,0x2C,0x00,	// background palette 1
@@ -123,28 +123,7 @@ sbyte sp_actor_dy[NUM_ACTORS];
 
 //////////////////////////////////////
 /// Function Listing:
-//
 
-
-//Scroll EX:
-void scroll_demo() {
-  int x = 0;   // x scroll position
-  int y = 0;   // y scroll position
-  int dy = 1;  // y scroll direction
-  int dx = 1;
-  // infinite loop
-  while (1) {
-    // wait for next frame
-    ppu_wait_frame();
-    // update y variable
-    x += dx;
-    // change direction when hitting either edge of scroll area
-    if (x >= 479) dx = -1;
-    if (x == 0) dx = 1;
-    // set scroll register
-    scroll(x, y);
-  }
-}
 
 
 //Checks if there's a Car Crash
@@ -223,6 +202,94 @@ bool check_Crash(byte *cX, byte *cY, byte *hX, byte *hY, bool *impact)
   
 }
 
+  
+
+// Our makeshift Title Screen. For now, just a bit of text and 
+// a START prompt.
+void tScreen()
+{
+  char oam_id;
+  char mess[32];
+  byte cont;
+  
+  bool play;
+  
+  int car_x;
+  int human_x;
+  play = false;
+  
+
+  
+  
+  car_x = 30;
+  human_x = 20;
+    
+  
+  //Don't move screens until Player presses Enter / START
+  while (play == false)
+  {
+    
+    oam_id = 0;
+   
+    
+    car_x = car_x +2;
+    
+    
+    
+    //Display the Title:
+    memset(mess, 0, sizeof(mess)); 
+    sprintf(mess,"Street Crossing");
+    vrambuf_put(NTADR_A(2,2), mess, 15);
+    
+    
+    //Give the Prompt to the Player:
+    memset(mess, 0, sizeof(mess)); 
+    sprintf(mess,"Press ENTER to play!");
+    vrambuf_put(NTADR_A(2,4), mess, 32);
+    
+    
+  
+    cont = pad_trigger(0);
+    
+    
+    //Do this if the player pressed Enter / START:
+    if (cont & PAD_START)
+    {
+      play = true;
+      ppu_off();
+      
+    //This will remove the text lines as we prepare the game. 
+    memset(mess, 0, sizeof(mess)); 
+    sprintf(mess,"");
+    vrambuf_put(NTADR_A(2,2), mess, 32);
+    
+    
+    memset(mess, 0, sizeof(mess)); 
+    sprintf(mess,"");
+    vrambuf_put(NTADR_A(2,4), mess, 32);
+      
+      
+      //Call this function again to display the new messages 
+      //- Removes the text in this case.
+      //- Consider having this as a function for future endaveors.
+      ppu_on_all();
+    
+      
+      
+    }
+      
+    
+    //Small preview of the game. Displays Cars moving around the screen.
+    oam_id = oam_meta_spr(car_x, 150, oam_id, enemyCar);
+    oam_id = oam_meta_spr(car_x, 80, oam_id, enemyCar);
+    oam_id = oam_meta_spr(100, 200, oam_id, metasprite);
+
+    
+    
+   
+  }
+}
+
 //The Main Function:
 void main(void)
 {
@@ -236,19 +303,27 @@ void main(void)
    bool collision; //A bool to confirm there was a collision.
   
   
+  
+  
   setup_graphics();
     // draw message  
     // vram_adr(NTADR_A(2,2));
     // vram_write("HELLO, WORLD!", 12);
    
   
+ 
+  
   isClear = false;
   noCrash = true;
   collision = false;
   
+
   //Assigning Cordinates;
   // - This sets where the metasprites will spawn in. 
+  
  
+ 
+  
   for (i = 0; i < NUM_ACTORS; i++)
   {
     //For the person:
@@ -277,16 +352,35 @@ void main(void)
   
  
  
+   //This is needed to make sure loading to the vram buffer works.
+      vrambuf_clear();
+      set_vram_update(updbuf);
+ 
   
   // enable rendering
   ppu_on_all();
   
   
+  
+  //Adds in the title screen:
+  tScreen(); 
+  
+   
+  
+  
+  
+  
+  
+ 
+  
+  
   //The main game loop:
   // - The game continues until the player makes it to the top
-  //   or if a car crashes into the player.
+  //   or if a car crashes into the player
   
-  while(isClear == false && collision == false) {
+  
+  while(isClear == false && collision == false) 
+  {
     
     // start with OAMid/sprite 0
     oam_id = 0;
@@ -406,19 +500,21 @@ void main(void)
      // hide rest of sprites
     // if we haven't wrapped oam_id around to 0
     if (oam_id!=0) oam_hide_rest(oam_id);
+    
     // wait for next frame
     ppu_wait_frame(); // Remove this if you want to see the human to go 
                       // at lightspeed (or at least till the borders).
     
    
     
-      //This is needed to make sure loading to the vram buffer works.
+     
+       //This is needed to make sure loading to the vram buffer works.
       vrambuf_clear();
       set_vram_update(updbuf);
-    
   
         
-  }
+  } //End of Main Loop;
+  
   
   //End Screen for the game:
   while(1)
